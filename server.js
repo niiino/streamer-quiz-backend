@@ -192,44 +192,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Notify others when someone starts broadcasting
-  socket.on("startBroadcast", ({ matchId, slotIndex }) => {
-    console.log(`📡 ${socket.id} started broadcasting slot ${slotIndex} in match ${matchId}`);
-
-    // Notify all other players in the match
-    socket.to(matchId).emit("peerStartedBroadcast", {
-      peerId: socket.id,
-      slotIndex,
-    });
-  });
-
-  // WebRTC Signaling
-  socket.on("webrtc-offer", ({ matchId, targetSocketId, offer, slotIndex }) => {
-    console.log(`📡 WebRTC Offer: ${socket.id} → ${targetSocketId} (slot ${slotIndex})`);
-    io.to(targetSocketId).emit("webrtc-offer", {
-      fromSocketId: socket.id,
-      offer,
-      slotIndex,
-    });
-  });
-
-  socket.on("webrtc-answer", ({ matchId, targetSocketId, answer, slotIndex }) => {
-    console.log(`📡 WebRTC Answer: ${socket.id} → ${targetSocketId} (slot ${slotIndex})`);
-    io.to(targetSocketId).emit("webrtc-answer", {
-      fromSocketId: socket.id,
-      answer,
-      slotIndex,
-    });
-  });
-
-  socket.on("webrtc-ice-candidate", ({ matchId, targetSocketId, candidate, slotIndex }) => {
-    console.log(`🧊 ICE Candidate: ${socket.id} → ${targetSocketId}`);
-    io.to(targetSocketId).emit("webrtc-ice-candidate", {
-      fromSocketId: socket.id,
-      candidate,
-      slotIndex,
-    });
-  });
+  // PeerJS handles signaling, we just need requestPeers for knowing who's in the match
 
   socket.on("disconnect", () => {
     console.log("❌ Client getrennt:", socket.id);
@@ -242,9 +205,6 @@ io.on("connection", (socket) => {
       if (match.players.length < initialLength) {
         console.log(`🔄 Spieler ${socket.id} aus Match ${matchId} entfernt`);
         io.to(matchId).emit("matchUpdate", match);
-
-        // Notify others that this peer disconnected
-        io.to(matchId).emit("peer-disconnected", { socketId: socket.id });
       }
 
       // Host verlässt? Match löschen
