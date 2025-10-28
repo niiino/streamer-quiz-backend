@@ -73,6 +73,7 @@ io.on("connection", (socket) => {
           showAnswer: {},
           playerScores: Array(8).fill(0),
           teamScores: Array(4).fill(0),
+          playerNames: Array.from({ length: 8 }, (_, i) => `Player ${i + 1}`),
         },
         createdAt: new Date(),
       };
@@ -97,12 +98,16 @@ io.on("connection", (socket) => {
   });
 
   // Spieler tritt Match bei
-  socket.on("joinMatch", (matchId, playerName) => {
+  socket.on("joinMatch", (matchId, playerName, callback) => {
     console.log(`👥 ${playerName} möchte Match ${matchId} beitreten`);
 
     if (!matches[matchId]) {
       console.error(`❌ Match ${matchId} existiert nicht`);
-      socket.emit("error", { message: "Match nicht gefunden" });
+      if (typeof callback === "function") {
+        callback({ success: false, error: "Match nicht gefunden" });
+      } else {
+        socket.emit("error", { message: "Match nicht gefunden" });
+      }
       return;
     }
 
@@ -112,6 +117,12 @@ io.on("connection", (socket) => {
     });
     socket.join(matchId);
 
+    // Sende aktuellen Match State an den neuen Spieler
+    if (typeof callback === "function") {
+      callback({ success: true, match: matches[matchId] });
+    }
+
+    // Broadcast an alle Spieler
     io.to(matchId).emit("matchUpdate", matches[matchId]);
     console.log(`✅ ${playerName} ist Match ${matchId} beigetreten`);
   });
