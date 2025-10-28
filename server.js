@@ -128,6 +128,36 @@ io.on("connection", (socket) => {
     io.to(matchId).emit("scoreUpdate", { playerId, delta, newScore });
   });
 
+  // Konfiguration aktualisieren (vom Host)
+  socket.on("updateConfig", ({ matchId, config }) => {
+    const match = matches[matchId];
+    if (!match) {
+      console.error(`❌ Match ${matchId} nicht gefunden`);
+      return;
+    }
+
+    console.log(`⚙️ Config Update für Match ${matchId}:`, config);
+    match.config = { ...match.config, ...config };
+
+    // An alle Spieler broadcasten
+    io.to(matchId).emit("matchUpdate", match);
+  });
+
+  // Spielzustand aktualisieren (revealed, showAnswer, scores)
+  socket.on("updateGameState", ({ matchId, state }) => {
+    const match = matches[matchId];
+    if (!match) {
+      console.error(`❌ Match ${matchId} nicht gefunden`);
+      return;
+    }
+
+    console.log(`🎮 Game State Update für Match ${matchId}`);
+    match.state = { ...match.state, ...state };
+
+    // An alle Spieler broadcasten
+    io.to(matchId).emit("matchUpdate", match);
+  });
+
   socket.on("disconnect", () => {
     console.log("❌ Client getrennt:", socket.id);
 
