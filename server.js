@@ -170,6 +170,39 @@ io.on("connection", (socket) => {
     io.to(matchId).emit("matchUpdate", match);
   });
 
+  // Request list of peers in a match
+  socket.on("requestPeers", ({ matchId }, callback) => {
+    const match = matches[matchId];
+    if (!match) {
+      console.error(`❌ Match ${matchId} nicht gefunden`);
+      if (typeof callback === "function") {
+        callback({ success: false, error: "Match nicht gefunden" });
+      }
+      return;
+    }
+
+    // Get all socket IDs in this room
+    const room = io.sockets.adapter.rooms.get(matchId);
+    const peers = room ? Array.from(room) : [];
+
+    console.log(`📊 Peers in match ${matchId}:`, peers);
+
+    if (typeof callback === "function") {
+      callback({ success: true, peers });
+    }
+  });
+
+  // Notify others when someone starts broadcasting
+  socket.on("startBroadcast", ({ matchId, slotIndex }) => {
+    console.log(`📡 ${socket.id} started broadcasting slot ${slotIndex} in match ${matchId}`);
+
+    // Notify all other players in the match
+    socket.to(matchId).emit("peerStartedBroadcast", {
+      peerId: socket.id,
+      slotIndex,
+    });
+  });
+
   // WebRTC Signaling
   socket.on("webrtc-offer", ({ matchId, targetSocketId, offer, slotIndex }) => {
     console.log(`📡 WebRTC Offer: ${socket.id} → ${targetSocketId} (slot ${slotIndex})`);
