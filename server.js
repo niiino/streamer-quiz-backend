@@ -74,6 +74,7 @@ io.on("connection", (socket) => {
           playerScores: Array(8).fill(0),
           teamScores: Array(4).fill(0),
           playerNames: Array.from({ length: 8 }, (_, i) => `Player ${i + 1}`),
+          playerImages: Array(8).fill(null),
         },
         createdAt: new Date(),
       };
@@ -169,6 +170,34 @@ io.on("connection", (socket) => {
     io.to(matchId).emit("matchUpdate", match);
   });
 
+  // WebRTC Signaling
+  socket.on("webrtc-offer", ({ matchId, targetSocketId, offer, slotIndex }) => {
+    console.log(`📡 WebRTC Offer: ${socket.id} → ${targetSocketId} (slot ${slotIndex})`);
+    io.to(targetSocketId).emit("webrtc-offer", {
+      fromSocketId: socket.id,
+      offer,
+      slotIndex,
+    });
+  });
+
+  socket.on("webrtc-answer", ({ matchId, targetSocketId, answer, slotIndex }) => {
+    console.log(`📡 WebRTC Answer: ${socket.id} → ${targetSocketId} (slot ${slotIndex})`);
+    io.to(targetSocketId).emit("webrtc-answer", {
+      fromSocketId: socket.id,
+      answer,
+      slotIndex,
+    });
+  });
+
+  socket.on("webrtc-ice-candidate", ({ matchId, targetSocketId, candidate, slotIndex }) => {
+    console.log(`🧊 ICE Candidate: ${socket.id} → ${targetSocketId}`);
+    io.to(targetSocketId).emit("webrtc-ice-candidate", {
+      fromSocketId: socket.id,
+      candidate,
+      slotIndex,
+    });
+  });
+
   socket.on("disconnect", () => {
     console.log("❌ Client getrennt:", socket.id);
 
@@ -180,6 +209,9 @@ io.on("connection", (socket) => {
       if (match.players.length < initialLength) {
         console.log(`🔄 Spieler ${socket.id} aus Match ${matchId} entfernt`);
         io.to(matchId).emit("matchUpdate", match);
+
+        // Notify others that this peer disconnected
+        io.to(matchId).emit("peer-disconnected", { socketId: socket.id });
       }
 
       // Host verlässt? Match löschen
